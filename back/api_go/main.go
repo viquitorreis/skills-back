@@ -1,8 +1,20 @@
 package main
 
-func main() {
-	server := NewApiServer(":3030")
+import (
+	"log"
+)
 
+func main() {
+	store, err := NewPostgresStore()
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	if err := store.Init(); err != nil {
+		log.Fatal(err)
+	}
+
+	server := NewApiServer(":3030", store)
 	server.Run()
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // tipo para converter nossas funções handler em HTTP Handle
@@ -20,7 +21,7 @@ func makeHTTPHandlerFuncHelper(f apiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// administrando o erro
 		if err := f(w, r); err != nil {
-			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+			WriteJSONHelper(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
 	}
 }
@@ -37,4 +38,13 @@ func WriteJSONHelper(w http.ResponseWriter, status int, v any) error {
 
 	// pŕecisamos fazer o encode do responseWriter
 	return json.NewEncoder(w).Encode(v)
+}
+
+func getBrazilCurrentTimeHelper() (*time.Location, error) {
+	loc, err := time.LoadLocation("America/Sao_Paulo")
+	if err != nil {
+		return nil, fmt.Errorf("An error occured getting Brazilian time: %v", err.Error())
+	}
+
+	return loc, nil
 }

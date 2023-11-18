@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
+	"time"
 )
 
 type Sex string
 type Language string
 
 const (
-	Male Sex = "Male"
-	Female Sex = "Female"
-	Other Sex = "Other"
+	Male Sex = "male"
+	Female Sex = "female"
+	Other Sex = "other"
 )
 
 const (
@@ -27,13 +27,24 @@ type Account struct {
 	Admin bool `json:"admin"`
 	Sex *Sex `json:"sex"`
 	Language *Language `json:"language"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+ 
+ //id | email | fullname | password | admin | sex | language | created_at | updated_at 
+type CreateAccountRequest struct {
+	Email string `json:"email"`
+	FullName string `json:"fullName"`
+	Password string `json:"password"`
+	Sex *Sex `json:"sex"`
+	Language *Language `json:"language"`
 }
 
 func validateSex(sex string) (*Sex, error) {
 	validSex := map[string]Sex{
-		"Male":   Male,
-		"Female": Female,
-		"Other":  Other,
+		"male":   Male,
+		"female": Female,
+		"other":  Other,
 	}
 
 	if value, ok := validSex[sex]; ok {
@@ -67,13 +78,19 @@ func NewAccount(email, fullName, password string, admin bool, sex, language stri
 		return nil, err
 	}
 
+	location, err := getBrazilCurrentTimeHelper()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Account{
-		ID: rand.Intn(100000), // passar para UUID ( ou algo melhor )
 		Email: email,
 		FullName: fullName,
 		Password: password,
-		Admin: true,
+		Admin: admin,
 		Sex: givenSex,
 		Language: givenLanguage,
+		CreatedAt: time.Now().In(location),
+		UpdatedAt: time.Now().In(location),
 	}, nil
 }

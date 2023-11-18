@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -67,7 +68,30 @@ func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) err
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	return nil	
+	createAccountReq := CreateAccountRequest{}
+	
+	if err := json.NewDecoder(r.Body).Decode(&createAccountReq); err != nil {
+		return err
+	}
+
+	fmt.Println(createAccountReq)
+	account, err := NewAccount(
+		createAccountReq.Email,
+		createAccountReq.FullName,
+		createAccountReq.Password,
+		false,
+		string(*createAccountReq.Sex),
+		string(*createAccountReq.Language),
+	)
+	if err != nil {
+		return err
+	}
+
+	if err := s.store.CreateAccount(account); err != nil {
+		return err
+	}
+fmt.Println(account)
+	return WriteJSONHelper(w, http.StatusOK, account)
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
