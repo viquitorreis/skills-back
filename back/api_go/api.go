@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -29,7 +30,7 @@ func (s *APIServer) Run() {
 
 	// endpoints
 	router.HandleFunc("/account", makeHTTPHandlerFuncHelper(s.handleAccount))
-	router.HandleFunc("/account/{id}", makeHTTPHandlerFuncHelper(s.handleGetAccount))
+	router.HandleFunc("/account/{id}", makeHTTPHandlerFuncHelper(s.handleGetAccountById))
 
 	log.Println("Escutando API JSON na porta:", s.listenAddr)
 
@@ -42,7 +43,7 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	// ResponseWriter => vai escrever cabeçalhos / header, corpo da resposta
 	// Request => request recebida pelo servidor. Vai ter informações do método, cabeçalho, header etc
 	if r.Method == "GET" {
-		return s.handleGetAccount(w, r)
+		return s.handleGetAccounts(w, r)
 	}
 
 	if r.Method == "POST" {
@@ -56,15 +57,19 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 	return fmt.Errorf("Método não suportado %s", r.Method)
 }
 
-func (s *APIServer) handleGetAccount(w http.ResponseWriter, r *http.Request) error {
-//	account, err := NewAccount("victorreis@reis.com", "Victor Reis", "123456", true, "Male", "en")
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusBadRequest)
-//		return nil
-//	}
-	vars := mux.Vars(r) // o vars retorna as variáveis de rota que estão na request, se existir algum (pega os parâmetros da request)
+func (s *APIServer) handleGetAccountById(w http.ResponseWriter, r *http.Request) error {
+	idStr := mux.Vars(r)["id"] // o vars retorna as variáveis de rota que estão na request, se existir algum (pega os parâmetros da request)
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return fmt.Errorf("Given ID is invalid %s", idStr)
+	}
 
-	return WriteJSONHelper(w, http.StatusOK, vars)
+	account, err := s.store.GetAccountById(id)
+	if err != nil {
+		return err
+	}
+
+	return WriteJSONHelper(w, http.StatusOK, account)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
@@ -74,13 +79,13 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	fmt.Println(createAccountReq)
 	account, err := NewAccount(
 		createAccountReq.Email,
 		createAccountReq.FullName,
 		createAccountReq.Password,
 		false,
 		string(*createAccountReq.Sex),
+		createAccountReq.Country,
 		string(*createAccountReq.Language),
 	)
 	if err != nil {
@@ -90,8 +95,17 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}
-fmt.Println(account)
+
 	return WriteJSONHelper(w, http.StatusOK, account)
+}
+
+func (s *APIServer) handleGetAccounts(w http.ResponseWriter, r *http.Request) error {
+	accounts, err := s.store.GetAccounts()
+	if err != nil {
+		return err
+	}
+
+	return WriteJSONHelper(w, http.StatusOK, accounts)
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {

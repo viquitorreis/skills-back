@@ -14,6 +14,7 @@ type Storage interface {
 	CreateAccount(*Account) error
 	DeleteAccount(int) error
 	UpdateAccount(*Account) error
+	GetAccounts() ([]*Account, error)
 	GetAccountById(int) (*Account, error)
 }
 
@@ -50,6 +51,7 @@ func (s *PostgresStore) CreateAccountTable() error {
 		password varchar(254) not null,
 		admin boolean not null,
 		sex text not null,
+		country text not null,
 		language text not null,
 		created_at timestamp,
 		updated_at timestamp
@@ -62,8 +64,8 @@ func (s *PostgresStore) CreateAccountTable() error {
 func (s *PostgresStore) CreateAccount(acc *Account) error {
 	query := `
 		insert into account
-		(email, fullname, password, admin, sex, language, created_at, updated_at)
-		values ($1, $2, $3, $4, $5, $6, $7, $8)
+		(email, fullname, password, admin, sex, country, language, created_at, updated_at)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	resp, err := s.db.Query(
@@ -73,6 +75,7 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 		acc.Password,
 		acc.Admin,
 		acc.Sex,
+		acc.Country,
 		acc.Language,
 		acc.CreatedAt,
 		acc.UpdatedAt,
@@ -94,6 +97,57 @@ func (s *PostgresStore) UpdateAccount(*Account) error {
 	return nil
 }
 
+func (s *PostgresStore) GetAccounts() ([]*Account, error) {
+	query := `select id, email, fullName, admin, sex, country, language, created_at, updated_at from account`
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("%v\n", rows)
+	accounts := []*Account{}
+	for rows.Next() {
+		account, err := ScanIntoAccount(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		accounts = append(accounts, account)
+	}
+
+	return accounts, nil
+}
+
 func (s *PostgresStore) GetAccountById(id int) (*Account, error) {
-	return nil, nil
+	query := `select id, email, fullName, admin, sex, country, language, created_at, updated_at from account where id = $1`
+	row, err := s.db.Query(
+		query,
+		id,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for row.Next() {
+		return ScanIntoAccount(row)
+	}
+
+	return nil, fmt.Errorf("Unable to get user from DB where id: %d", id)
+}
+
+func ScanIntoAccount(rows *sql.Rows) (*Account, error) {
+	account := &Account{}
+	err := rows.Scan(
+		&account.ID,
+		&account.Email,
+		&account.FullName,
+		&account.Admin,
+		&account.Sex,
+		&account.Country,
+		&account.Language,
+		&account.CreatedAt,
+		&account.UpdatedAt,
+	)
+
+	return account, err
 }

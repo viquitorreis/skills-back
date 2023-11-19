@@ -26,6 +26,7 @@ type Account struct {
 	Password string `json:"password"`
 	Admin bool `json:"admin"`
 	Sex *Sex `json:"sex"`
+	Country string `json:"country"`
 	Language *Language `json:"language"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
@@ -37,6 +38,7 @@ type CreateAccountRequest struct {
 	FullName string `json:"fullName"`
 	Password string `json:"password"`
 	Sex *Sex `json:"sex"`
+	Country string `json:"country"`
 	Language *Language `json:"language"`
 }
 
@@ -66,7 +68,7 @@ func validateLanguage(language string) (*Language, error) {
 	return nil, fmt.Errorf("Invalid value for lanague: %s", language)
 }
 
-func NewAccount(email, fullName, password string, admin bool, sex, language string) (*Account, error) {
+func NewAccount(email, fullName, password string, admin bool, sex, country, language string) (*Account, error) {
 
 	givenSex, err := validateSex(sex)
 	if err != nil {
@@ -89,6 +91,7 @@ func NewAccount(email, fullName, password string, admin bool, sex, language stri
 		Password: password,
 		Admin: admin,
 		Sex: givenSex,
+		Country: country,
 		Language: givenLanguage,
 		CreatedAt: time.Now().In(location),
 		UpdatedAt: time.Now().In(location),
