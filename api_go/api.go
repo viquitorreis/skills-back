@@ -30,7 +30,7 @@ func (s *APIServer) Run() {
 
 	// endpoints
 	router.HandleFunc("/account", makeHTTPHandlerFuncHelper(s.handleAccount))
-	router.HandleFunc("/account/{id}", makeHTTPHandlerFuncHelper(s.handleGetAccountById))
+	router.HandleFunc("/account/{id}", withJWTAuthHelper(makeHTTPHandlerFuncHelper(s.handleGetAccountById)))
 
 	log.Println("Escutando API JSON na porta:", s.listenAddr)
 

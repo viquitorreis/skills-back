@@ -48,3 +48,10 @@ func getBrazilCurrentTimeHelper() (*time.Location, error) {
 
 	return loc, nil
 }
+
+func withJWTAuthHelper(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return func (w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Calling JWT Helper")
+		handlerFunc(w, r)
+	}
+}
