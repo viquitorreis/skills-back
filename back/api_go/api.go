@@ -50,26 +50,29 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 		return s.handleCreateAccount(w, r)
 	}
 
-	if r.Method == "DELETE" {
-		return s.handleDeleteAccount(w, r)
-	}
-
 	return fmt.Errorf("Método não suportado %s", r.Method)
 }
 
 func (s *APIServer) handleGetAccountById(w http.ResponseWriter, r *http.Request) error {
-	idStr := mux.Vars(r)["id"] // o vars retorna as variáveis de rota que estão na request, se existir algum (pega os parâmetros da request)
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return fmt.Errorf("Given ID is invalid %s", idStr)
+	if r.Method == "GET" {
+		id, err := GetUserId(r)
+		if err != nil {
+			return err
+		}
+
+		account, err := s.store.GetAccountById(id)
+		if err != nil {
+			return err
+		}
+
+		return WriteJSONHelper(w, http.StatusOK, account)
 	}
 
-	account, err := s.store.GetAccountById(id)
-	if err != nil {
-		return err
+	if r.Method == "DELETE" {
+		return s.handleDeleteAccount(w, r)
 	}
-
-	return WriteJSONHelper(w, http.StatusOK, account)
+	
+	return fmt.Errorf("Method not supported %s", r.Method)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
@@ -109,7 +112,25 @@ func (s *APIServer) handleGetAccounts(w http.ResponseWriter, r *http.Request) er
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
-	return nil	
+	id, err := GetUserId(r)
+	if err != nil {
+		return err
+	}
+
+	if err := s.store.DeleteAccount(id); err != nil {
+		return err
+	}
+
+	return WriteJSONHelper(w, http.StatusOK, map[string]int{"user deleted:": id})
 }
 
 
+func GetUserId(r *http.Request) (int, error) {
+	idStr := mux.Vars(r)["id"] // o vars retorna as variáveis de rota que estão na request, se existir algum (pega os parâmetros da request)
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return id, fmt.Errorf("Given ID is invalid %s", idStr)
+	}
+
+	return id, nil
+}
