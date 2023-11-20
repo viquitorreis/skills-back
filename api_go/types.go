@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Sex string
@@ -23,7 +25,7 @@ type Account struct {
 	ID int `json:"id"`
 	Email string `json:"email"`
 	FullName string `json:"fullName"`
-	Password string `json:"password"`
+	Password string `json:"-"`
 	Admin bool `json:"admin"`
 	Sex *Sex `json:"sex"`
 	Country string `json:"country"`
@@ -32,63 +34,53 @@ type Account struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
  
- //id | email | fullname | password | admin | sex | language | created_at | updated_at 
 type CreateAccountRequest struct {
+	Email string `json:"email" validate:"email,required"`
+	FullName string `json:"fullName" validate:"required"`
+	Password string `json:"password" validate:"required"`
+	Sex *Sex `json:"sex" validate:"required"`
+	Country string `json:"country" validate:"required"`
+	Language *Language `json:"language" validate:"required"`
+}
+
+type LoginRequest struct {
 	Email string `json:"email"`
-	FullName string `json:"fullName"`
 	Password string `json:"password"`
-	Sex *Sex `json:"sex"`
-	Country string `json:"country"`
-	Language *Language `json:"language"`
 }
 
-func validateSex(sex string) (*Sex, error) {
-	validSex := map[string]Sex{
-		"male":   Male,
-		"female": Female,
-		"other":  Other,
-	}
-
-	if value, ok := validSex[sex]; ok {
-		return &value, nil
-	}
-
-	return nil, fmt.Errorf("Invalid value for sex: %s", sex)
-}
-
-func validateLanguage(language string) (*Language, error) {
-	validLanguage := map[string]Language{
-		"en": En,
-		"br": Br,
-	}
-
-	if value, ok := validLanguage[language]; ok {
-		return &value, nil
-	}
-	return nil, fmt.Errorf("Invalid value for lanague: %s", language)
+type LoginResponse struct {
+	Email string `json:"email"`
+	Token string `json:"token"`
 }
 
 func NewAccount(email, fullName, password string, admin bool, sex, country, language string) (*Account, error) {
 
-	givenSex, err := validateSex(sex)
+	givenSex, err := validateSexHelper(sex)
 	if err != nil {
 		return nil, err
 	}
 
-	givenLanguage, err := validateLanguage(language)
+	givenLanguage, err := validateLanguageHelper(language)
 	if err != nil {
 		return nil, err
 	}
 
-	location, err := getBrazilCurrentTimeHelper()
+	location, err := GetBrazilCurrentTimeHelper()
 	if err != nil {
 		return nil, err
 	}
+
+	encryptedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("encryptedPassword =>", encryptedPassword)
 
 	return &Account{
 		Email: email,
 		FullName: fullName,
-		Password: password,
+		Password: string(encryptedPassword),
 		Admin: admin,
 		Sex: givenSex,
 		Country: country,

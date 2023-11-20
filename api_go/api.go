@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
+	validator "github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
 
@@ -28,9 +28,10 @@ func (s *APIServer) Run() {
 	// criando router
 	router := mux.NewRouter()
 
-	// endpoints
-	router.HandleFunc("/account", makeHTTPHandlerFuncHelper(s.handleAccount))
-	router.HandleFunc("/account/{id}", withJWTAuthHelper(makeHTTPHandlerFuncHelper(s.handleGetAccountById)))
+	// endpoints 
+	router.HandleFunc("/login", MakeHTTPHandlerFuncHelper(s.handleLogin))
+	router.HandleFunc("/account", MakeHTTPHandlerFuncHelper(s.handleAccount))
+	router.HandleFunc("/account/{id}", WithJWTAuthHelper(MakeHTTPHandlerFuncHelper(s.handleGetAccountById), s.store))
 
 	log.Println("Escutando API JSON na porta:", s.listenAddr)
 
@@ -55,7 +56,7 @@ func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error 
 
 func (s *APIServer) handleGetAccountById(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "GET" {
-		id, err := GetUserId(r)
+		id, err := GetAccountIdInRequestHelper(r)
 		if err != nil {
 			return err
 		}
@@ -80,6 +81,14 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 	
 	if err := json.NewDecoder(r.Body).Decode(&createAccountReq); err != nil {
 		return err
+	}
+
+	validate := validator.New()
+	err := validate.Struct(createAccountReq)
+	if err != nil {
+		errMsg := fmt.Errorf("Not all fields were given %s: ", err)
+		fmt.Println(errMsg)
+		return WriteJSONHelper(w, http.StatusBadRequest, ApiError{Error: errMsg.Error()})
 	}
 
 	account, err := NewAccount(
@@ -112,7 +121,7 @@ func (s *APIServer) handleGetAccounts(w http.ResponseWriter, r *http.Request) er
 }
 
 func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) error {
-	id, err := GetUserId(r)
+	id, err := GetAccountIdInRequestHelper(r)
 	if err != nil {
 		return err
 	}
@@ -124,13 +133,34 @@ func (s *APIServer) handleDeleteAccount(w http.ResponseWriter, r *http.Request) 
 	return WriteJSONHelper(w, http.StatusOK, map[string]int{"user deleted:": id})
 }
 
-
-func GetUserId(r *http.Request) (int, error) {
-	idStr := mux.Vars(r)["id"] // o vars retorna as variáveis de rota que estão na request, se existir algum (pega os parâmetros da request)
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		return id, fmt.Errorf("Given ID is invalid %s", idStr)
+func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
+	if r.Method != "POST" {
+		return fmt.Errorf("Method not supported %s", r.Method)
 	}
 
-	return id, nil
+	req := LoginRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return err
+	}
+
+	acc, err := s.GetAccountByEmailHelper(req.Email)
+	if err != nil {
+		return err
+	}
+
+	if !acc.ValidateHashedPasswordHelper(req.Password) {
+		return fmt.Errorf("User not authenticated")
+	}
+
+	token, err := CreateJWTHelper(acc)
+	if err != nil {
+		return err
+	}
+	resp := LoginResponse{
+		Email: acc.Email,
+		Token: token,
+	}
+
+	return WriteJSONHelper(w, http.StatusOK, resp)
 }
+

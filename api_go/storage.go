@@ -16,6 +16,7 @@ type Storage interface {
 	UpdateAccount(*Account) error
 	GetAccounts() ([]*Account, error)
 	GetAccountById(int) (*Account, error)
+	GetAccountByEmail(string) (*Account, error)
 }
 
 type PostgresStore struct {
@@ -68,7 +69,7 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
-	resp, err := s.db.Query(
+	_, err := s.db.Query(
 		query,
 		acc.Email,
 		acc.FullName,
@@ -85,7 +86,7 @@ func (s *PostgresStore) CreateAccount(acc *Account) error {
 		return err
 	}
 
-	fmt.Printf("%v+\n", resp)
+	// fmt.Printf("%v+\n", resp)
 	return nil
 }
 
@@ -141,12 +142,30 @@ func (s *PostgresStore) GetAccountById(id int) (*Account, error) {
 	return nil, fmt.Errorf("Unable to get user from DB where id: %d", id)
 }
 
+func (s *PostgresStore) GetAccountByEmail(email string) (*Account, error) {
+	query := `select id, email, fullName, password, admin, sex, country, language, created_at, updated_at from account where email = $1`
+	row, err := s.db.Query(
+		query,
+		email,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for row.Next() {
+		return ScanIntoAccount(row)
+	}
+
+	return nil, fmt.Errorf("Unable to get user from DB where email: %d", email)
+}
+
 func ScanIntoAccount(rows *sql.Rows) (*Account, error) {
 	account := &Account{}
 	err := rows.Scan(
 		&account.ID,
 		&account.Email,
 		&account.FullName,
+		&account.Password,
 		&account.Admin,
 		&account.Sex,
 		&account.Country,
