@@ -8,30 +8,32 @@ import (
 
 	validator "github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"github.com/markbates/goth/gothic"
 )
 
 type APIServer struct {
 	listenAddr string
-	store Storage
+	store      Storage
 }
 
 // pegando o listenAddr como parâmetro e retornar o valor como um novo APIServer
 func NewApiServer(listenAddr string, store Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
-		store: store,
+		store:      store,
 	}
 }
 
- // Inicializando o servidor
+// Inicializando o servidor
 func (s *APIServer) Run() {
 	// criando router
 	router := mux.NewRouter()
 
-	// endpoints 
+	// endpoints
 	router.HandleFunc("/login", MakeHTTPHandlerFuncHelper(s.handleLogin))
 	router.HandleFunc("/account", MakeHTTPHandlerFuncHelper(s.handleAccount))
 	router.HandleFunc("/account/{id}", WithJWTAuthHelper(MakeHTTPHandlerFuncHelper(s.handleGetAccountById), s.store))
+	router.HandleFunc("/auth/{provider}/callback", MakeHTTPHandlerFuncHelper(s.handleGetAuthCallbackFunction))
 
 	log.Println("Escutando API JSON na porta:", s.listenAddr)
 
@@ -72,13 +74,13 @@ func (s *APIServer) handleGetAccountById(w http.ResponseWriter, r *http.Request)
 	if r.Method == "DELETE" {
 		return s.handleDeleteAccount(w, r)
 	}
-	
+
 	return fmt.Errorf("Method not supported %s", r.Method)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
 	createAccountReq := CreateAccountRequest{}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&createAccountReq); err != nil {
 		return err
 	}
@@ -164,3 +166,27 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	return WriteJSONHelper(w, http.StatusOK, resp)
 }
 
+func (s *APIServer) handleGetAuthCallbackFunction(w http.ResponseWriter, r *http.Request) error {
+
+	user, err := gothic.CompleteUserAuth(w, r)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return WriteJSONHelper(w, http.StatusBadRequest, err)
+	}
+
+	fmt.Println(user)
+
+	// Ao autenticar o user precisamos redirecionar ele para outra rota
+	http.Redirect(w, r, "https://techcrunch.com/", http.StatusFound)
+	return nil
+}
+
+// https://github.com/markbates/goth/blob/master/examples/main.go
+func (s *APIServer) handleAuthLogaut(w http.ResponseWriter, r *http.Request) error {
+	return nil
+}
+
+func (s *APIServer) handleAuthProvider(w http.ResponseWriter, r *http.Request) error {
+	// tentar pegar o user sem re-autenticar
+	return nil
+}

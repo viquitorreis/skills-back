@@ -31,6 +31,7 @@ func NewPostgresStore() (*PostgresStore, error) {
 	
 	connStr := os.Getenv("CONN_STR")
 	db, err := sql.Open("postgres", connStr)
+	// se o db não existe fica eternamente carregando a api
 	if err != nil {
 		return nil, err
 	}
