@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	auth "gitlab.com/skills3180945/back/api/auth"
+	"github.com/viquitorreis/skills-back.git/auth"
 )
 
 func main() {
@@ -29,6 +29,6 @@ func main() {
 	}
 
 	auth.NewAuth()
-	server := NewApiServer(":3030", store)
+	server := NewApiServer(port, store)
 	server.Run()
 }
