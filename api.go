@@ -1,14 +1,16 @@
 package main
 
 import (
+	// "context"
+
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
 	validator "github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
-	"github.com/markbates/goth/gothic"
 )
 
 type APIServer struct {
@@ -29,19 +31,16 @@ func (s *APIServer) Run() {
 	// criando router
 	router := mux.NewRouter()
 
-	// endpoints
 	router.HandleFunc("/login", MakeHTTPHandlerFuncHelper(s.handleLogin))
 	router.HandleFunc("/account", MakeHTTPHandlerFuncHelper(s.handleAccount))
 	router.HandleFunc("/account/{id}", WithJWTAuthHelper(MakeHTTPHandlerFuncHelper(s.handleGetAccountById), s.store))
-	router.HandleFunc("/auth/{provider}/callback", MakeHTTPHandlerFuncHelper(s.handleGetAuthCallbackFunction))
+	router.HandleFunc("/auth/google", MakeHTTPHandlerFuncHelper(s.handleGoogleAuthLogin))
 
 	log.Println("Escutando API JSON na porta:", s.listenAddr)
 
-	// "escutando" e servirndo a API do server
 	http.ListenAndServe(s.listenAddr, router)
 }
 
-// criando handler => vai ser um método de APIServer. Vamos poder acessar essa função ao chamar nossa struct APIServer
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
 	// ResponseWriter => vai escrever cabeçalhos / header, corpo da resposta
 	// Request => request recebida pelo servidor. Vai ter informações do método, cabeçalho, header etc
@@ -166,27 +165,30 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	return WriteJSONHelper(w, http.StatusOK, resp)
 }
 
-func (s *APIServer) handleGetAuthCallbackFunction(w http.ResponseWriter, r *http.Request) error {
+func (s *APIServer) handleGoogleAuthLogin(w http.ResponseWriter, r *http.Request) error {
 
-	user, err := gothic.CompleteUserAuth(w, r)
-	if err != nil {
-		fmt.Fprintln(w, err)
-		return WriteJSONHelper(w, http.StatusBadRequest, err)
+	fmt.Print("Called here")
+	if r.Method != "POST" {
+		// return
+		return WriteJSONHelper(w, http.StatusBadRequest, ApiError{Error: "Method not supported"})
 	}
 
-	fmt.Println(user)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return WriteJSONHelper(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 
-	// Ao autenticar o user precisamos redirecionar ele para outra rota
-	http.Redirect(w, r, "https://techcrunch.com/", http.StatusFound)
-	return nil
-}
+	bodyString := string(body)
+	fmt.Println(bodyString)
 
-// https://github.com/markbates/goth/blob/master/examples/main.go
-func (s *APIServer) handleAuthLogaut(w http.ResponseWriter, r *http.Request) error {
-	return nil
-}
+	err = r.ParseForm()
+	if err != nil {
+		return WriteJSONHelper(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+	}
 
-func (s *APIServer) handleAuthProvider(w http.ResponseWriter, r *http.Request) error {
-	// tentar pegar o user sem re-autenticar
+	code := r.Form.Get("code")
+	fmt.Println("code =>", code)
+
+	http.Redirect(w, r, "http://localhost:4200/dashboard", http.StatusFound)
 	return nil
 }

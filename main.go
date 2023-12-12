@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/viquitorreis/skills-back.git/auth"
 )
 
 func main() {
@@ -28,7 +27,6 @@ func main() {
 		log.Fatal("Error fetching port in .env")
 	}
 
-	auth.NewAuth()
 	server := NewApiServer(port, store)
 	server.Run()
 }
