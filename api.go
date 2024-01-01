@@ -11,6 +11,7 @@ import (
 
 	validator "github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 type APIServer struct {
@@ -36,9 +37,11 @@ func (s *APIServer) Run() {
 	router.HandleFunc("/account/{id}", WithJWTAuthHelper(MakeHTTPHandlerFuncHelper(s.handleGetAccountById), s.store))
 	router.HandleFunc("/auth/google", MakeHTTPHandlerFuncHelper(s.handleGoogleAuthLogin))
 
+	routerHandler := cors.Default().Handler(router)
+
 	log.Println("Escutando API JSON na porta:", s.listenAddr)
 
-	http.ListenAndServe(s.listenAddr, router)
+	http.ListenAndServe(s.listenAddr, routerHandler)
 }
 
 func (s *APIServer) handleAccount(w http.ResponseWriter, r *http.Request) error {
@@ -78,7 +81,10 @@ func (s *APIServer) handleGetAccountById(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) error {
-	createAccountReq := CreateAccountRequest{}
+	// createAccountReq := CreateAccountRequest{}
+	w.Header().Set("Content-Type", "application/json")
+
+	createAccountReq := NewbieCreateAccountRequest{}
 
 	if err := json.NewDecoder(r.Body).Decode(&createAccountReq); err != nil {
 		return err
@@ -97,14 +103,15 @@ func (s *APIServer) handleCreateAccount(w http.ResponseWriter, r *http.Request) 
 		createAccountReq.FullName,
 		createAccountReq.Password,
 		false,
-		string(*createAccountReq.Sex),
-		createAccountReq.Country,
-		string(*createAccountReq.Language),
+		"male",
+		"Brazil",
+		"pt-BR",
 	)
 	if err != nil {
 		return err
 	}
 
+	fmt.Println(account)
 	if err := s.store.CreateAccount(account); err != nil {
 		return err
 	}

@@ -63,14 +63,14 @@ func validateSexHelper(sex string) (*Sex, error) {
 
 func validateLanguageHelper(language string) (*Language, error) {
 	validLanguage := map[string]Language{
-		"en": En,
-		"br": Br,
+		"en":    En,
+		"pt-BR": Br,
 	}
 
 	if value, ok := validLanguage[language]; ok {
 		return &value, nil
 	}
-	return nil, fmt.Errorf("Invalid value for lanague: %s", language)
+	return nil, fmt.Errorf("Invalid value for language: %s", language)
 }
 
 func GetBrazilCurrentTimeHelper() (*time.Location, error) {
@@ -102,9 +102,9 @@ func (s *APIServer) GetAccountByEmailHelper(email string) (*Account, error) {
 }
 
 func WithJWTAuthHelper(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Calling JWT Helper")
-		
+
 		tokenString := r.Header.Get("x-jwt-token")
 		token, err := ValidateJWTHelper(tokenString)
 		if err != nil {
@@ -142,7 +142,7 @@ func WithJWTAuthHelper(handlerFunc http.HandlerFunc, s Storage) http.HandlerFunc
 
 func ValidateJWTHelper(tokenString string) (*jwt.Token, error) {
 	secret := os.Getenv("JWT_SECRET")
-	return jwt.Parse(tokenString, func (token *jwt.Token) (interface{}, error) {
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
@@ -153,7 +153,7 @@ func ValidateJWTHelper(tokenString string) (*jwt.Token, error) {
 
 func CreateJWTHelper(account *Account) (string, error) {
 	claims := &jwt.MapClaims{
-		"expiresAt": 15000,
+		"expiresAt":     15000,
 		"accountNumber": account.ID,
 	}
 
@@ -171,4 +171,3 @@ func PermissionDeniedHelper(w http.ResponseWriter) {
 func (a *Account) ValidateHashedPasswordHelper(password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(a.Password), []byte(password)) == nil // precisamos retornar nil pois a função CompareHash... retorna um erro quando a senha não for igual a do hash
 }
-
