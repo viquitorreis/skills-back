@@ -56,6 +56,7 @@ type LoginRequest struct {
 type LoginResponse struct {
 	Email string `json:"email"`
 	Token string `json:"token"`
+	Admin string `json:"admin"`
 }
 
 func NewAccount(email, fullName, password string, admin bool, sex, country, language string) (*Account, error) {

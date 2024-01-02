@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	validator "github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
@@ -167,6 +168,7 @@ func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) error {
 	resp := LoginResponse{
 		Email: acc.Email,
 		Token: token,
+		Admin: strconv.FormatBool(acc.Admin),
 	}
 
 	return WriteJSONHelper(w, http.StatusOK, resp)
