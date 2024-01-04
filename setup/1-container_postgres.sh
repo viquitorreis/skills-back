@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Permissão antes de rodar:
-# chmod +x run_postgres.sh
+# chmod +x container_postgres.sh
 
 docker run -d \
   --name skills \

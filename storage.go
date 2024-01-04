@@ -28,7 +28,7 @@ func NewPostgresStore() (*PostgresStore, error) {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	
+
 	connStr := os.Getenv("CONN_STR")
 	db, err := sql.Open("postgres", connStr)
 	// se o db não existe fica eternamente carregando a api
@@ -42,6 +42,20 @@ func NewPostgresStore() (*PostgresStore, error) {
 }
 
 func (s *PostgresStore) Init() error {
+	rows, err := s.db.Query("SELECT 1 FROM pg_extension WHERE extname = 'citext'")
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		_, err := s.db.Exec("CREATE EXTENSION IF NOT EXISTS citext")
+		if err != nil {
+			return err
+		}
+		fmt.Println("Extensão citext criada com sucesso.")
+	}
+
 	return s.CreateAccountTable()
 }
 
@@ -62,7 +76,7 @@ func (s *PostgresStore) CreateAccountTable() error {
 	_, err := s.db.Exec(query)
 	return err
 }
- 
+
 func (s *PostgresStore) CreateAccount(acc *Account) error {
 	query := `
 		insert into account
